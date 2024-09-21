@@ -197,6 +197,8 @@ void AFallingSlimeSlimeCharacter::Landed(const FHitResult& Hit)
 
 void AFallingSlimeSlimeCharacter::OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode)
 {
+	Super::OnMovementModeChanged(PrevMovementMode, PreviousCustomMode);
+
 	if (AFallingSlimePlayerController* PC = GetController<AFallingSlimePlayerController>())
 	{
 		switch (SlimeCharacterMovement->MovementMode)
