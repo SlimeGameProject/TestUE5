@@ -88,6 +88,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "FallingSlime|SlimeCharacter")
 	void Metamorphose(TSubclassOf<AFallingSlimeSlimeCharacter> SlimeCharacterClassToMetamorphose);
 
+protected:
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "FallingSlime|SlimeCharacter", DisplayName = "OnMetamorphose")
+	void K2_OnMetamorphose(AFallingSlimeSlimeCharacter* SlimeCharacterToMetamorphose);
+
 	// Begin Interfaces used AFallingSlimeSlimeCharacter metamorphose into stone. 
 
 public:

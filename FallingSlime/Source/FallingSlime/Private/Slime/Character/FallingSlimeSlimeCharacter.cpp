@@ -95,6 +95,8 @@ void AFallingSlimeSlimeCharacter::Metamorphose(TSubclassOf<AFallingSlimeSlimeCha
 			// 新しいスライムに速度をコピーする
 			SlimeCharacterToMetamorphose->LaunchCharacter(GetVelocity(), true, true);
 			SlimeCharacterToMetamorphose->AddMovementInput(ConsumeMovementInputVector());
+
+			K2_OnMetamorphose(SlimeCharacterToMetamorphose);
 			
 			AController* OldController = Controller;
 			const FRotator OldControlRotation = Controller->GetControlRotation();
