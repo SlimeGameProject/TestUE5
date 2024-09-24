@@ -57,17 +57,19 @@ public:
 
 protected:
 
+	bool CheckStoneFall(const FFindFloorResult& OldFloor, const FHitResult& Hit, const FVector& Delta, const FVector& OldLocation, float remainingTime, float timeTick, int32 Iterations, bool bMustJump);
+
 	virtual void PhysSticking(float DeltaTime, int32 Iterations);
 
 	virtual void PhysStoneLanding(float DeltaTime, int32 Iterations);
-
-	void MoveAlongFloor2(const FVector& InVelocity, float DeltaSeconds, FStepDownResult* OutStepDownResult);
 
 	virtual void PhysStoneFalling(float DeltaTime, int32 Iterations);
 
 	virtual void ProcessStoneLanded(const FHitResult& Hit, float RemainingTime, int32 Iterations);
 
 	virtual void SetPostStoneLandedPhysics(const FHitResult& Hit);
+
+	void StartStoneFalling(int32 Iterations, float remainingTime, float timeTick, const FVector& Delta, const FVector& subLoc);
 
 public:
 

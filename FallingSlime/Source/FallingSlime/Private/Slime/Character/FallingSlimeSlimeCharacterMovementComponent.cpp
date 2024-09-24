@@ -100,6 +100,28 @@ void UFallingSlimeSlimeCharacterMovementComponent::JumpByCharge()
 	StopChargingForJump();
 }
 
+bool UFallingSlimeSlimeCharacterMovementComponent::CheckStoneFall(const FFindFloorResult& OldFloor, const FHitResult& Hit, const FVector& Delta, const FVector& OldLocation, float remainingTime, float timeTick, int32 Iterations, bool bMustJump)
+{
+	if (!HasValidData())
+	{
+		return false;
+	}
+
+	if (bMustJump || CanWalkOffLedges())
+	{
+		HandleWalkingOffLedge(OldFloor.HitResult.ImpactNormal, OldFloor.HitResult.Normal, OldLocation, timeTick);
+
+		if (UpdatedComponent && MovementMode == EMovementMode::MOVE_Custom && CustomMovementMode == (uint8)EFallingSlimeSlimeCharacterCustomMovementMode::StoneLanding)
+		{
+			// If still walking, then fall. If not, assume the user set a different mode they want to keep.
+			StartStoneFalling(Iterations, remainingTime, timeTick, Delta, OldLocation);
+		}
+
+		return true;
+	}
+	return false;
+}
+
 void UFallingSlimeSlimeCharacterMovementComponent::PhysSticking(float DeltaTime, int32 Iterations)
 {
 	// 張り付き機能は必要なるタイミングまで後回しにする
@@ -121,20 +143,17 @@ void UFallingSlimeSlimeCharacterMovementComponent::PhysStoneLanding(float DeltaT
 
 	if (!UpdatedComponent->IsQueryCollisionEnabled())
 	{
-		SetMovementMode(MOVE_Walking);
 		return;
 	}
 
 	bJustTeleported = false;
 	bool bCheckedFall = false;
 	bool bTriedLedgeMove = false;
-	float remainingTime = 0.f;
+	float RemainingTime = 0.f;
 
-	Iterations++;
+	Iterations = 1;
 
-	bJustTeleported = false;
-
-	const float timeTick = DeltaTime;
+	const float TimeTick = DeltaTime;
 
 	// Save current values
 	UPrimitiveComponent* const OldBase = GetMovementBase();
@@ -155,18 +174,35 @@ void UFallingSlimeSlimeCharacterMovementComponent::PhysStoneLanding(float DeltaT
 		FindFloor(UpdatedComponent->GetComponentLocation(), CurrentFloor, true, NULL);
 	}
 
+	const bool bCheckLedges = !CanWalkOffLedges();
+
+	if (!CurrentFloor.IsWalkableFloor())
+	{
+		// see if it is OK to jump
+		// @todo collision : only thing that can be problem is that oldbase has world collision on
+		bool bMustJump = (OldBase == NULL || (!OldBase->IsQueryCollisionEnabled() && MovementBaseUtility::IsDynamicBase(OldBase)));
+
+		if ((bMustJump || !bCheckedFall) && CheckStoneFall(OldFloor, CurrentFloor.HitResult, FVector::ZeroVector, OldLocation, RemainingTime, TimeTick, Iterations, bMustJump))
+		{
+			return;
+		}
+
+		// revert this move
+		RevertMove(OldLocation, OldBase, PreviousBaseLocation, OldFloor, true);
+		RemainingTime = 0.f;
+
+		return;
+	}
+
 	// Validate the floor check
 	if (CurrentFloor.IsWalkableFloor())
 	{
 		if (ShouldCatchAir(OldFloor, CurrentFloor))
 		{
-			HandleWalkingOffLedge(OldFloor.HitResult.ImpactNormal, OldFloor.HitResult.Normal, OldLocation, timeTick);
+			HandleWalkingOffLedge(OldFloor.HitResult.ImpactNormal, OldFloor.HitResult.Normal, OldLocation, TimeTick);
 
-			if (IsMovingOnGround())
-			{
-				// If still walking, then fall. If not, assume the user set a different mode they want to keep.
-				StartFalling(Iterations, remainingTime, timeTick, FVector::ZeroVector, OldLocation);
-			}
+			// If still walking, then fall. If not, assume the user set a different mode they want to keep.
+			StartStoneFalling(Iterations, RemainingTime, TimeTick, FVector::ZeroVector, OldLocation);
 
 			return;
 		}
@@ -186,92 +222,13 @@ void UFallingSlimeSlimeCharacterMovementComponent::PhysStoneLanding(float DeltaT
 	}
 
 	// Make velocity reflect actual move
-	if (!bJustTeleported && timeTick >= MIN_TICK_TIME)
+	if (!bJustTeleported && TimeTick >= MIN_TICK_TIME)
 	{
-		Velocity = (UpdatedComponent->GetComponentLocation() - OldLocation) / timeTick;
+		Velocity = (UpdatedComponent->GetComponentLocation() - OldLocation) / TimeTick;
 	}
 	
 	MaintainHorizontalGroundVelocity();
 }
-
-
-void UFallingSlimeSlimeCharacterMovementComponent::MoveAlongFloor2(const FVector& InVelocity, float DeltaSeconds, FStepDownResult* OutStepDownResult)
-{
-	if (!CurrentFloor.IsWalkableFloor())
-	{
-		return;
-	}
-
-	// Move along the current floor
-	const FVector Delta = FVector(InVelocity.X, InVelocity.Y, 0.f) * DeltaSeconds;
-	FHitResult Hit(1.f);
-	FVector RampVector = ComputeGroundMovementDelta(Delta, CurrentFloor.HitResult, CurrentFloor.bLineTrace);
-	SafeMoveUpdatedComponent(RampVector, UpdatedComponent->GetComponentQuat(), true, Hit);
-	float LastMoveTimeSlice = DeltaSeconds;
-
-	if (Hit.bStartPenetrating)
-	{
-		// Allow this hit to be used as an impact we can deflect off, otherwise we do nothing the rest of the update and appear to hitch.
-		HandleImpact(Hit);
-		SlideAlongSurface(Delta, 1.f, Hit.Normal, Hit, true);
-
-		if (Hit.bStartPenetrating)
-		{
-			OnCharacterStuckInGeometry(&Hit);
-		}
-	}
-	else if (Hit.IsValidBlockingHit())
-	{
-		// We impacted something (most likely another ramp, but possibly a barrier).
-		float PercentTimeApplied = Hit.Time;
-		if ((Hit.Time > 0.f) && (Hit.Normal.Z > UE_KINDA_SMALL_NUMBER) && IsWalkable(Hit))
-		{
-			// Another walkable ramp.
-			const float InitialPercentRemaining = 1.f - PercentTimeApplied;
-			RampVector = ComputeGroundMovementDelta(Delta * InitialPercentRemaining, Hit, false);
-			LastMoveTimeSlice = InitialPercentRemaining * LastMoveTimeSlice;
-			SafeMoveUpdatedComponent(RampVector, UpdatedComponent->GetComponentQuat(), true, Hit);
-
-			const float SecondHitPercent = Hit.Time * InitialPercentRemaining;
-			PercentTimeApplied = FMath::Clamp(PercentTimeApplied + SecondHitPercent, 0.f, 1.f);
-		}
-
-		if (Hit.IsValidBlockingHit())
-		{
-			if (CanStepUp(Hit) || (CharacterOwner->GetMovementBase() != nullptr && Hit.HitObjectHandle == CharacterOwner->GetMovementBase()->GetOwner()))
-			{
-				// hit a barrier, try to step up
-				const FVector PreStepUpLocation = UpdatedComponent->GetComponentLocation();
-				const FVector GravDir(0.f, 0.f, -1.f);
-				if (!StepUp(GravDir, Delta * (1.f - PercentTimeApplied), Hit, OutStepDownResult))
-				{
-					HandleImpact(Hit, LastMoveTimeSlice, RampVector);
-					SlideAlongSurface(Delta, 1.f - PercentTimeApplied, Hit.Normal, Hit, true);
-				}
-				else
-				{
-					if (!bMaintainHorizontalGroundVelocity)
-					{
-						// Don't recalculate velocity based on this height adjustment, if considering vertical adjustments. Only consider horizontal movement.
-						bJustTeleported = true;
-						const float StepUpTimeSlice = (1.f - PercentTimeApplied) * DeltaSeconds;
-						if (!HasAnimRootMotion() && !CurrentRootMotion.HasOverrideVelocity() && StepUpTimeSlice >= UE_KINDA_SMALL_NUMBER)
-						{
-							Velocity = (UpdatedComponent->GetComponentLocation() - PreStepUpLocation) / StepUpTimeSlice;
-							Velocity.Z = 0;
-						}
-					}
-				}
-			}
-			else if (Hit.Component.IsValid() && !Hit.Component.Get()->CanCharacterStepUp(CharacterOwner))
-			{
-				HandleImpact(Hit, LastMoveTimeSlice, RampVector);
-				SlideAlongSurface(Delta, 1.f - PercentTimeApplied, Hit.Normal, Hit, true);
-			}
-		}
-	}
-}
-
 
 void UFallingSlimeSlimeCharacterMovementComponent::PhysStoneFalling(float DeltaTime, int32 Iterations)
 {
@@ -330,13 +287,19 @@ void UFallingSlimeSlimeCharacterMovementComponent::ProcessStoneLanded(const FHit
 
 void UFallingSlimeSlimeCharacterMovementComponent::SetPostStoneLandedPhysics(const FHitResult& Hit)
 {
-	if (AFallingSlimeSlimeCharacter* SlimeCharacterOwner = Cast<AFallingSlimeSlimeCharacter>(CharacterOwner))
-	{
-		/*const FVector PreImpactAccel = Acceleration + (IsFalling() ? -GetGravityDirection() * GetGravityZ() : FVector::ZeroVector);
-		const FVector PreImpactVelocity = Velocity;*/
+	SetMovementMode(EMovementMode::MOVE_Custom, (uint8)EFallingSlimeSlimeCharacterCustomMovementMode::StoneLanding);
+}
 
-		SetMovementMode(EMovementMode::MOVE_Custom, (uint8)EFallingSlimeSlimeCharacterCustomMovementMode::StoneLanding);
+void UFallingSlimeSlimeCharacterMovementComponent::StartStoneFalling(int32 Iterations, float RemainingTime, float TimeTick, const FVector& Delta, const FVector& SubLocation)
+{
+	// start falling 
+	const float DesiredDist = Delta.Size();
+	const float ActualDist = (UpdatedComponent->GetComponentLocation() - SubLocation).Size2D();
+	RemainingTime = (DesiredDist < UE_KINDA_SMALL_NUMBER)
+		? 0.f
+		: RemainingTime + TimeTick * (1.f - FMath::Min(1.f, ActualDist / DesiredDist));
 
-		//ApplyImpactPhysicsForces(Hit, PreImpactAccel, PreImpactVelocity);
-	}
+	SetMovementMode(MOVE_Custom, (uint8)EFallingSlimeSlimeCharacterCustomMovementMode::StoneFalling);
+
+	StartNewPhysics(RemainingTime, Iterations);
 }
