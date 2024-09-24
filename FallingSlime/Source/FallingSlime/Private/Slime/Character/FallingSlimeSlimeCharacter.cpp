@@ -210,6 +210,9 @@ void AFallingSlimeSlimeCharacter::OnMovementModeChanged(EMovementMode PrevMoveme
 			break;
 		case EMovementMode::MOVE_Falling:
 			PC->PossessCamera(PlayerCameraClassOnAir);
+
+			// ジャンプのチャージをキャンセルする
+			SlimeCharacterMovement->StopChargingForJump();
 			break;
 		case EMovementMode::MOVE_Custom:
 			switch (SlimeCharacterMovement->CustomMovementMode)
