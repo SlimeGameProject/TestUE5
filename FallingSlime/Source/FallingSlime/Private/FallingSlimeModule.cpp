@@ -2,4 +2,14 @@
 
 #include "Modules/ModuleManager.h"
 
-IMPLEMENT_PRIMARY_GAME_MODULE( FDefaultGameModuleImpl, FallingSlime, "FallingSlime" );
+class FFallingSlimeModule : public FDefaultGameModuleImpl
+{
+public:
+
+	virtual void StartupModule() override
+	{
+
+	}
+};
+
+IMPLEMENT_PRIMARY_GAME_MODULE(FFallingSlimeModule, FallingSlime, "FallingSlime" );
