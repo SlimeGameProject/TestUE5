@@ -90,8 +90,8 @@ void UFallingSlimeSlimeCharacterMovementComponent::JumpByCharge()
 	float JumpSpeed = JumpBaseSpeed + JumpAdditionalSpeed * (ChargingTimeInSecondsForJump / MaxChargingTimeInSecondsForJump);
 
 	FVector PawnOwnerForwardVector = UKismetMathLibrary::GetForwardVector(PawnOwner->GetControlRotation());
-	FVector JumpForwardDirection = FVector{ PawnOwnerForwardVector.X, PawnOwnerForwardVector.Y, 0.f }.GetClampedToMaxSize(0.6f);
-	FVector JumpUpDirection = FVector{ 0.f, 0.f, 0.4f };
+	FVector JumpForwardDirection = FVector{ PawnOwnerForwardVector.X, PawnOwnerForwardVector.Y, 0.f }.GetClampedToMaxSize(JumpForwardDirectionRate);
+	FVector JumpUpDirection = FVector{ 0.f, 0.f, 1 - JumpForwardDirectionRate };
 
 	Launch((JumpForwardDirection + JumpUpDirection) * JumpSpeed);
 
@@ -100,31 +100,9 @@ void UFallingSlimeSlimeCharacterMovementComponent::JumpByCharge()
 	StopChargingForJump();
 }
 
-bool UFallingSlimeSlimeCharacterMovementComponent::CheckStoneFall(const FFindFloorResult& OldFloor, const FHitResult& Hit, const FVector& Delta, const FVector& OldLocation, float remainingTime, float timeTick, int32 Iterations, bool bMustJump)
-{
-	if (!HasValidData())
-	{
-		return false;
-	}
-
-	if (bMustJump || CanWalkOffLedges())
-	{
-		HandleWalkingOffLedge(OldFloor.HitResult.ImpactNormal, OldFloor.HitResult.Normal, OldLocation, timeTick);
-
-		if (UpdatedComponent && MovementMode == EMovementMode::MOVE_Custom && CustomMovementMode == (uint8)EFallingSlimeSlimeCharacterCustomMovementMode::StoneLanding)
-		{
-			// If still walking, then fall. If not, assume the user set a different mode they want to keep.
-			StartStoneFalling(Iterations, remainingTime, timeTick, Delta, OldLocation);
-		}
-
-		return true;
-	}
-	return false;
-}
-
 void UFallingSlimeSlimeCharacterMovementComponent::PhysSticking(float DeltaTime, int32 Iterations)
 {
-	// 張り付き機能は必要なるタイミングまで後回しにする
+	// 張り付き機能は必要なるタイミングまで後回しにしておく
 }
 
 void UFallingSlimeSlimeCharacterMovementComponent::PhysStoneLanding(float DeltaTime, int32 Iterations)
@@ -134,98 +112,44 @@ void UFallingSlimeSlimeCharacterMovementComponent::PhysStoneLanding(float DeltaT
 		return;
 	}
 
-	if (!CharacterOwner || (!CharacterOwner->Controller && !bRunPhysicsWithNoController && !HasAnimRootMotion() && !CurrentRootMotion.HasOverrideVelocity() && (CharacterOwner->GetLocalRole() != ROLE_SimulatedProxy)))
+	if (!CharacterOwner || (!CharacterOwner->Controller && !bRunPhysicsWithNoController))
 	{
 		Acceleration = FVector::ZeroVector;
 		Velocity = FVector::ZeroVector;
+
 		return;
 	}
 
-	if (!UpdatedComponent->IsQueryCollisionEnabled())
+	if (!UpdatedComponent || !UpdatedComponent->IsQueryCollisionEnabled())
 	{
 		return;
 	}
 
-	bJustTeleported = false;
-	bool bCheckedFall = false;
-	bool bTriedLedgeMove = false;
+	Iterations = 1;
+	const float TimeTick = DeltaTime;
 	float RemainingTime = 0.f;
 
-	Iterations = 1;
-
-	const float TimeTick = DeltaTime;
-
-	// Save current values
+	// UCharacterMovementComponent の実装に倣って、現在の値を保持しておく（以降の関数呼び出しによって値が変化する可能性がある）
 	UPrimitiveComponent* const OldBase = GetMovementBase();
-	const FVector PreviousBaseLocation = (OldBase != NULL) ? OldBase->GetComponentLocation() : FVector::ZeroVector;
 	const FVector OldLocation = UpdatedComponent->GetComponentLocation();
 	const FFindFloorResult OldFloor = CurrentFloor;
 
-	FStepDownResult StepDownResult;
-
-	// Update floor.
-	// StepUp might have already done it for us.
-	if (StepDownResult.bComputedFloor)
-	{
-		CurrentFloor = StepDownResult.FloorResult;
-	}
-	else
-	{
-		FindFloor(UpdatedComponent->GetComponentLocation(), CurrentFloor, true, NULL);
-	}
-
-	const bool bCheckLedges = !CanWalkOffLedges();
+	// 地面の情報を更新する
+	FindFloor(UpdatedComponent->GetComponentLocation(), CurrentFloor, true, NULL);
 
 	if (!CurrentFloor.IsWalkableFloor())
 	{
-		// see if it is OK to jump
-		// @todo collision : only thing that can be problem is that oldbase has world collision on
-		bool bMustJump = (OldBase == NULL || (!OldBase->IsQueryCollisionEnabled() && MovementBaseUtility::IsDynamicBase(OldBase)));
-
-		if ((bMustJump || !bCheckedFall) && CheckStoneFall(OldFloor, CurrentFloor.HitResult, FVector::ZeroVector, OldLocation, RemainingTime, TimeTick, Iterations, bMustJump))
-		{
-			return;
-		}
-
-		// revert this move
-		RevertMove(OldLocation, OldBase, PreviousBaseLocation, OldFloor, true);
-		RemainingTime = 0.f;
+		// 床がなければ、岩状態での落下を開始する
+		StartStoneFalling(Iterations, RemainingTime, TimeTick, FVector::ZeroVector, OldLocation);
 
 		return;
 	}
 
-	// Validate the floor check
-	if (CurrentFloor.IsWalkableFloor())
-	{
-		if (ShouldCatchAir(OldFloor, CurrentFloor))
-		{
-			HandleWalkingOffLedge(OldFloor.HitResult.ImpactNormal, OldFloor.HitResult.Normal, OldLocation, TimeTick);
+	AdjustFloorHeight();
+	SetBase(CurrentFloor.HitResult.Component.Get(), CurrentFloor.HitResult.BoneName);
 
-			// If still walking, then fall. If not, assume the user set a different mode they want to keep.
-			StartStoneFalling(Iterations, RemainingTime, TimeTick, FVector::ZeroVector, OldLocation);
-
-			return;
-		}
-
-		AdjustFloorHeight();
-		SetBase(CurrentFloor.HitResult.Component.Get(), CurrentFloor.HitResult.BoneName);
-	}
-	else if (CurrentFloor.HitResult.bStartPenetrating)
-	{
-		// The floor check failed because it started in penetration
-		// We do not want to try to move downward because the downward sweep failed, rather we'd like to try to pop out of the floor.
-		FHitResult Hit(CurrentFloor.HitResult);
-		Hit.TraceEnd = Hit.TraceStart + FVector(0.f, 0.f, MAX_FLOOR_DIST);
-		const FVector RequestedAdjustment = GetPenetrationAdjustment(Hit);
-
-		ResolvePenetration(RequestedAdjustment, Hit, UpdatedComponent->GetComponentQuat());
-	}
-
-	// Make velocity reflect actual move
-	if (!bJustTeleported && TimeTick >= MIN_TICK_TIME)
-	{
-		Velocity = (UpdatedComponent->GetComponentLocation() - OldLocation) / TimeTick;
-	}
+	// 移動した距離に合わせて速度を計算する
+	Velocity = (UpdatedComponent->GetComponentLocation() - OldLocation) / TimeTick;
 	
 	MaintainHorizontalGroundVelocity();
 }
@@ -262,6 +186,7 @@ void UFallingSlimeSlimeCharacterMovementComponent::PhysStoneFalling(float DeltaT
 
 		if (Hit.bBlockingHit && IsValidLandingSpot(UpdatedComponent->GetComponentLocation(), Hit))
 		{
+			// 地面に衝突した場合、StoneLanding に移行する
 			RemainingTime += SubTimeTickRemaining;
 			ProcessStoneLanded(Hit, RemainingTime, Iterations);
 
@@ -292,7 +217,6 @@ void UFallingSlimeSlimeCharacterMovementComponent::SetPostStoneLandedPhysics(con
 
 void UFallingSlimeSlimeCharacterMovementComponent::StartStoneFalling(int32 Iterations, float RemainingTime, float TimeTick, const FVector& Delta, const FVector& SubLocation)
 {
-	// start falling 
 	const float DesiredDist = Delta.Size();
 	const float ActualDist = (UpdatedComponent->GetComponentLocation() - SubLocation).Size2D();
 	RemainingTime = (DesiredDist < UE_KINDA_SMALL_NUMBER)
