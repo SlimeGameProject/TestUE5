@@ -16,7 +16,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnStopChargingForJump);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnJumpedByCharge);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnReachedMaxChargeForJump);
 
-UCLASS(meta = (DisplayName = "Slime Character Movement"))
+UCLASS(meta = (DisplayName = "SlimeCharacterMovement"))
 class FALLINGSLIME_API UFallingSlimeSlimeCharacterMovementComponent : public UCharacterMovementComponent
 {
 	GENERATED_BODY()
@@ -43,21 +43,19 @@ protected:
 
 public:
 
-	UFUNCTION(BlueprintCallable, Category = "FallingSlime|SlimeCharacterMovement")
+	UFUNCTION(BlueprintCallable, Category = "JumpByCharge")
 	bool IsChargingForJump() const { return bIsChargingForJump; }
 
-	UFUNCTION(BlueprintCallable, Category = "FallingSlime|SlimeCharacterMovement")
+	UFUNCTION(BlueprintCallable, Category = "JumpByCharge")
 	void StartChargingForJump();
 
-	UFUNCTION(BlueprintCallable, Category = "FallingSlime|SlimeCharacterMovement")
+	UFUNCTION(BlueprintCallable, Category = "JumpByCharge")
 	void StopChargingForJump();
 
-	UFUNCTION(BlueprintCallable, Category = "FallingSlime|SlimeCharacterMovement")
+	UFUNCTION(BlueprintCallable, Category = "JumpByCharge")
 	void JumpByCharge();
 
 protected:
-
-	bool CheckStoneFall(const FFindFloorResult& OldFloor, const FHitResult& Hit, const FVector& Delta, const FVector& OldLocation, float remainingTime, float timeTick, int32 Iterations, bool bMustJump);
 
 	virtual void PhysSticking(float DeltaTime, int32 Iterations);
 
@@ -73,28 +71,34 @@ protected:
 
 public:
 
-	UPROPERTY(BlueprintReadWrite, Category = "FallingSlime|SlimeCharacterMovement", EditAnywhere)
+	UPROPERTY(BlueprintReadWrite, Category = "JumpByCharge", EditAnywhere)
 	float JumpBaseSpeed{ 1100.f };
 
-	UPROPERTY(BlueprintReadWrite, Category = "FallingSlime|SlimeCharacterMovement", EditAnywhere)
+	UPROPERTY(BlueprintReadWrite, Category = "JumpByCharge", EditAnywhere)
 	float JumpAdditionalSpeed{ 1000.f };
 
-	UPROPERTY(BlueprintReadWrite, Category = "FallingSlime|SlimeCharacterMovement", EditAnywhere)
+	// ジャンプ方向における進行方向と上方向の成分の比率（０～１）
+	// ０の場合、ワールド座標系におけるZ軸の正の向きにジャンプする。
+	// １の場合、ワールド座標系におけるスライムのXY平面における正面方向にジャンプする。
+	UPROPERTY(BlueprintReadWrite, Category = "JumpByCharge", EditAnywhere)
+	float JumpForwardDirectionRate = 0.6f;
+
+	UPROPERTY(BlueprintReadWrite, Category = "JumpByCharge", EditAnywhere)
 	float MaxChargingTimeInSecondsForJump{ 3.f };
 
-	UPROPERTY(BlueprintAssignable, Category = "FallingSlime|SlimeCharacterMovement")
+	UPROPERTY(BlueprintAssignable, Category = "JumpByCharge")
 	FOnJumpedByCharge OnJumpedByCharge;
 
-	UPROPERTY(BlueprintAssignable, Category = "FallingSlime|SlimeCharacterMovement")
+	UPROPERTY(BlueprintAssignable, Category = "JumpByCharge")
 	FOnReachedMaxChargeForJump OnReachedMaxChargeForJump;
 
-	UPROPERTY(BlueprintAssignable, Category = "FallingSlime|SlimeCharacterMovement")
+	UPROPERTY(BlueprintAssignable, Category = "JumpByCharge")
 	FOnStartChargingForJump OnStartChargingForJump;
 
-	UPROPERTY(BlueprintAssignable, Category = "FallingSlime|SlimeCharacterMovement")
+	UPROPERTY(BlueprintAssignable, Category = "JumpByCharge")
 	FOnStopChargingForJump OnStopChargingForJump;
 
-	UPROPERTY(BlueprintReadWrite, Category = "FallingSlime|SlimeCharacterMovement", EditAnywhere)
+	UPROPERTY(BlueprintReadWrite, Category = "StoneFalling", EditAnywhere)
 	float Stone_FallVelocityZ{ 2500.f };
 
 private:
