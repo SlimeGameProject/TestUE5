@@ -111,6 +111,11 @@ void AFallingSlimeSlimeCharacter::Metamorphose(TSubclassOf<AFallingSlimeSlimeCha
 	}
 }
 
+void AFallingSlimeSlimeCharacter::MetamorphosedFrom(AFallingSlimeSlimeCharacter* OriginalSlimeCharacter)
+{
+	K2_OnMetamorphosedFrom(OriginalSlimeCharacter);
+}
+
 void AFallingSlimeSlimeCharacter::StoneLanded(const FHitResult& Hit)
 {
 	if (NiagaraSystem_StoneLanded)
