@@ -5,6 +5,9 @@
 // Include headers in Engine module.
 #include "Components/CapsuleComponent.h"
 
+// Include headers in Niagara module.
+#include "NiagaraFunctionLibrary.h"
+
 AFallingSlimeSlimeCharacter* UFallingSlimeSlimeCharacterMetamorphosisSubsystem::MetamorphoseSlimeCharacter(AFallingSlimeSlimeCharacter* OriginalSlimeCharacter, const UFallingSlimeSlimeCharacterMetamorphosisData* MetamorphosisData)
 {
 	if (!OriginalSlimeCharacter)
@@ -43,6 +46,15 @@ AFallingSlimeSlimeCharacter* UFallingSlimeSlimeCharacterMetamorphosisSubsystem::
 		MetamorphosedSlimeCharacter->MetamorphosedFrom(OriginalSlimeCharacter);
 
 		OriginalSlimeCharacter->Destroy();
+
+		if (UNiagaraSystem* NiagaraSystem_Metamorphosed = MetamorphosisData->GetNiagaraSystem_Metamorphosed())
+		{
+			UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+				/* WorldContextObject = */ MetamorphosedSlimeCharacter,
+				/* SystemTemplate = */ NiagaraSystem_Metamorphosed,
+				MetamorphosedSlimeCharacter->GetActorLocation(),
+				MetamorphosedSlimeCharacter->GetActorRotation());
+		}
 	}
 
 	return MetamorphosedSlimeCharacter;
