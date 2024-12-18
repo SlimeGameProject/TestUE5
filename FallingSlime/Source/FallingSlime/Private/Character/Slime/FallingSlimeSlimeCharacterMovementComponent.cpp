@@ -1,13 +1,13 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-#include "Slime/Character/FallingSlimeSlimeCharacterMovementComponent.h"
+#include "Character/Slime/FallingSlimeSlimeCharacterMovementComponent.h"
 
 // Include headers in Engine module.
 #include "Kismet/KismetMathLibrary.h"
 
 // Include headers in FallingSlime module.
-#include "Slime/Character/FallingSlimeSlimeCharacter.h"
-#include "Slime/Character/FallingSlimeSlimeCharacterMovementTypes.h"
+#include "Character/Slime/FallingSlimeSlimeCharacter.h"
+#include "Character/Slime/FallingSlimeSlimeCharacterMovementTypes.h"
 
 UFallingSlimeSlimeCharacterMovementComponent::UFallingSlimeSlimeCharacterMovementComponent(const FObjectInitializer& ObjectInitializer)
 {

@@ -1,5 +1,4 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
-#include "Slime/Character/FallingSlimeSlimeCharacterMetamorphosisData.h"
+#include "Character/Slime/FallingSlimeSlimeCharacterMetamorphosisTypes.h"
 

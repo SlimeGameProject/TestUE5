@@ -5,13 +5,34 @@
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
 
-// Include headers in Niagara module.
-#include "NiagaraSystem.h"
-
 // Include headers in FallingSlime module.
 #include "FallingSlimeSlimeCharacter.h"
 
-#include "FallingSlimeSlimeCharacterMetamorphosisData.generated.h"
+// Include headers in Niagara module.
+#include "NiagaraSystem.h"
+
+#include "FallingSlimeSlimeCharacterMetamorphosisTypes.generated.h"
+
+USTRUCT(BlueprintType)
+struct FALLINGSLIME_API FFallingSlimeSlimeCharacterMetamorphosisResult
+{
+	GENERATED_BODY()
+
+public:
+
+	FFallingSlimeSlimeCharacterMetamorphosisResult() : FFallingSlimeSlimeCharacterMetamorphosisResult(false) {}
+
+	FFallingSlimeSlimeCharacterMetamorphosisResult(bool bHasMetamorphosed) : bHasMetamorphosed(bHasMetamorphosed)
+	{}
+
+public:
+
+	UPROPERTY(BlueprintReadOnly)
+	bool bHasMetamorphosed{ false };
+
+	UPROPERTY(BlueprintReadOnly)
+	AFallingSlimeSlimeCharacter* MetamorphosedSlimeCharacter;
+};
 
 /**
  * 

@@ -5,13 +5,13 @@
 #include "CoreMinimal.h"
 #include "GameFramework/DamageType.h"
 
-#include "FallingSlimeDamageType_Recovery.generated.h"
+#include "FallingSlimeRecoveryType.generated.h"
 
 /**
  * 
  */
-UCLASS()
-class FALLINGSLIME_API UFallingSlimeDamageType_Recovery : public UDamageType
+UCLASS(meta = (DisplayName = "Falling Slime Recovery Type"))
+class FALLINGSLIME_API UFallingSlimeRecoveryType : public UDamageType
 {
 	GENERATED_BODY()
 

@@ -1,6 +1,6 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-#include "Slime/Character/FallingSlimeSlimeCharacter.h"
+#include "Character/Slime/FallingSlimeSlimeCharacter.h"
 
 // Include headers in Engine module.
 #include "Components/CapsuleComponent.h"
@@ -13,8 +13,8 @@
 #include "EnhancedInputSubsystems.h"
 
 // Include headers in FallingSlime module.
-#include "Collision/FallingSlimeCollisionSettings.h"
-#include "Slime/Character/FallingSlimeSlimeCharacterMovementTypes.h"
+#include "Collision/FallingSlimeCollisionPresets.h"
+#include "Character/Slime/FallingSlimeSlimeCharacterMovementTypes.h"
 #include "Player/FallingSlimePlayerCameraManager.h"
 #include "Player/FallingSlimePlayerController.h"
 
