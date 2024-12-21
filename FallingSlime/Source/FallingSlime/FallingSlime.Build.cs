@@ -17,6 +17,7 @@ public class FallingSlime : ModuleRules
 			"InputCore",
 			"Niagara",
 			"Slate",
+			"UMG",
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });

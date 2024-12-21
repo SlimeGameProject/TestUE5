@@ -9,7 +9,7 @@
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnHealthPointChanged, float, OldHealthPoint, float, NewHealthPoint);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnMaxHealthPointChanged, float, OldMaxHealthPoint, float, NewMaxHealthPoint);
 
-UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent, DisplayName = "Health"))
+UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent, DisplayName = "Falling Slime Health Component"))
 class FALLINGSLIME_API UFallingSlimeHealthComponent : public UActorComponent
 {
 	GENERATED_BODY()

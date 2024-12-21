@@ -2,7 +2,7 @@
 
 #include "FallingSlimeGameInstance.h"
 
-#include "UI/FallingSlimeNavigationConfig.h"
+#include "UI/Navigation/FallingSlimeNavigationConfig.h"
 
 void UFallingSlimeGameInstance::Init()
 {
